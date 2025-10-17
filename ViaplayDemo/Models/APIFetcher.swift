@@ -13,6 +13,7 @@ actor ViaplayFetcher: @MainActor APIFetcher {
 
   @MainActor
   func fetch(_ urlString: String) async throws -> ViaplayResponse {
+    // Check if we already have cached (and validated) data.
     if let cached = cache[urlString] {
       return cached
     }
@@ -24,7 +25,10 @@ actor ViaplayFetcher: @MainActor APIFetcher {
     do {
       let (data, _) = try await URLSession.shared.data(from: url)
       let response = try JSONDecoder().decode(ViaplayResponse.self, from: data)
+
+      // Cache data retrieved from API response
       cache.cacheResponse(response, for: urlString, data: data)
+
       return response
     } catch {
       // Try to load from disk cache (offline mode)

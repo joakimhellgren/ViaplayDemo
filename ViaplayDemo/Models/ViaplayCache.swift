@@ -20,11 +20,13 @@ class ViaplayCache {
     return cache
   }()
 
+  /// Retrieves a (valid) cached response for the specified key
   subscript(_ key: String) -> ViaplayResponse? {
     guard let cachedResponse = cache.object(forKey: key as NSString) else {
       return nil
     }
 
+    // Clear cache if expired.
     if cachedResponse.isExpired {
       clearCache()
       return nil
@@ -33,6 +35,7 @@ class ViaplayCache {
     return cachedResponse.response
   }
 
+  /// Caches data (memory & disk) retrieved from the API response.
   func cacheResponse(
     _ response: ViaplayResponse,
     for urlString: String,
@@ -51,6 +54,7 @@ class ViaplayCache {
     try? data.write(to: fileURL)
   }
 
+  /// Loads any cache data from disk.
   func loadFromDiskCache(_ urlString: String) -> ViaplayResponse? {
     let filename = urlString.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
     let fileURL = cacheDirectory.appendingPathComponent(filename)
@@ -69,6 +73,7 @@ class ViaplayCache {
     return response
   }
 
+  /// Remove all cached data.
   private func clearCache() {
     cache.removeAllObjects()
     let fileManager = FileManager.default
@@ -82,6 +87,7 @@ fileprivate extension ViaplayCache {
     let response: ViaplayResponse
     private let timestamp: Date
 
+    // Expires after 15 minutes.
     var isExpired: Bool {
       let expirationTime: TimeInterval = 15 * 60
       let now = Date()
