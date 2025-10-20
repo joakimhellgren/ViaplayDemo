@@ -4,7 +4,7 @@ protocol APIFetcher {
   func fetch(_ urlString: String) async throws -> ViaplayResponse
 }
 
-final class ViaplayFetcher: APIFetcher {
+struct ViaplayFetcher: APIFetcher {
   private let cache: ViaplayCache
 
   init() {
@@ -13,7 +13,7 @@ final class ViaplayFetcher: APIFetcher {
 
   func fetch(_ urlString: String) async throws -> ViaplayResponse {
     // Check if we already have cached (and validated) data.
-    if let cached = cache[urlString] {
+    if let cached = await cache[urlString] {
       return cached
     }
 
@@ -26,12 +26,12 @@ final class ViaplayFetcher: APIFetcher {
       let response = try JSONDecoder().decode(ViaplayResponse.self, from: data)
 
       // Cache data retrieved from API response
-      cache.cacheResponse(response, for: urlString, data: data)
+      await cache.cacheResponse(response, for: urlString, data: data)
 
       return response
     } catch {
       // Try to load from disk cache (offline mode)
-      guard let cachedResponse = cache.loadFromDiskCache(urlString) else {
+      guard let cachedResponse = await cache.loadFromDiskCache(urlString) else {
         throw error
       }
 
@@ -40,7 +40,7 @@ final class ViaplayFetcher: APIFetcher {
   }
 }
 
-final class MockViaplayFetcher: APIFetcher {
+struct MockViaplayFetcher: APIFetcher {
   func fetch(_ urlString: String) async throws -> ViaplayResponse {
     try? await Task.sleep(for: .seconds(.random(in: 0.2...2)))
     return .init(

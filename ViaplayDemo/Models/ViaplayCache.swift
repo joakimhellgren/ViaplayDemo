@@ -1,6 +1,6 @@
 import Foundation
 
-class ViaplayCache {
+actor ViaplayCache {
   // Memory cache
   private let cache = NSCache<NSString, CachedResponse>()
 
@@ -50,35 +50,48 @@ class ViaplayCache {
       withAllowedCharacters: .alphanumerics
     ) ?? UUID().uuidString
 
-    let fileURL = cacheDirectory.appendingPathComponent(filename)
+    let cacheDir = cacheDirectory
+    let fileURL = cacheDir.appendingPathComponent(filename)
     try? data.write(to: fileURL)
   }
 
   /// Loads any cache data from disk.
-  func loadFromDiskCache(_ urlString: String) -> ViaplayResponse? {
+  func loadFromDiskCache(_ urlString: String) async -> ViaplayResponse? {
     let filename = urlString.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
-    let fileURL = cacheDirectory.appendingPathComponent(filename)
+    let cacheDirectory = self.cacheDirectory
 
-    guard
-      let data = try? Data(contentsOf: fileURL),
-      let response = try? JSONDecoder().decode(ViaplayResponse.self, from: data)
-    else {
+    let response = await Task { @MainActor () -> ViaplayResponse? in
+      let fileURL = cacheDirectory.appendingPathComponent(filename)
+      
+      guard let data = try? Data(contentsOf: fileURL) else {
+        return nil
+      }
+
+      return try? JSONDecoder().decode(ViaplayResponse.self, from: data)
+    }.value
+
+    guard let validResponse = response else {
       return nil
     }
 
-    // Update memory cache
+    updateMemoryCache(response: validResponse, for: urlString)
+
+    return validResponse
+  }
+
+  /// Helper to update memory cache (actor-isolated)
+  private func updateMemoryCache(response: ViaplayResponse, for urlString: String) {
     let cached = CachedResponse(response: response, timestamp: Date())
     cache.setObject(cached, forKey: urlString as NSString)
-
-    return response
   }
 
   /// Remove all cached data.
   private func clearCache() {
     cache.removeAllObjects()
     let fileManager = FileManager.default
-    try? fileManager.removeItem(at: cacheDirectory)
-    try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    let cacheDir = cacheDirectory
+    try? fileManager.removeItem(at: cacheDir)
+    try? fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
   }
 }
 
