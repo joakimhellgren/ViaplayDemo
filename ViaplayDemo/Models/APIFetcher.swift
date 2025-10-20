@@ -4,21 +4,20 @@ protocol APIFetcher {
   func fetch(_ urlString: String) async throws -> ViaplayResponse
 }
 
-actor ViaplayFetcher: @MainActor APIFetcher {
+final class ViaplayFetcher: APIFetcher {
   private let cache: ViaplayCache
 
   init() {
     cache = .init()
   }
 
-  @MainActor
   func fetch(_ urlString: String) async throws -> ViaplayResponse {
     // Check if we already have cached (and validated) data.
     if let cached = cache[urlString] {
       return cached
     }
 
-    guard let url  = URL(string: urlString) else {
+    guard let url = URL(string: urlString) else {
       throw ViaplayError.invalidURL
     }
 
@@ -41,7 +40,7 @@ actor ViaplayFetcher: @MainActor APIFetcher {
   }
 }
 
-actor MockViaplayFetcher: @MainActor APIFetcher {
+final class MockViaplayFetcher: APIFetcher {
   func fetch(_ urlString: String) async throws -> ViaplayResponse {
     try? await Task.sleep(for: .seconds(.random(in: 0.2...2)))
     return .init(

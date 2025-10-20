@@ -1,7 +1,6 @@
 import Foundation
 
-@MainActor
-class ViaplayService {
+final class ViaplayService {
   private let fetcher: APIFetcher
   private let baseURL = "https://content.viaplay.com/ios-se"
 
